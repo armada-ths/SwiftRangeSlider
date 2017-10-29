@@ -71,7 +71,7 @@ import QuartzCore
   }
   
   ///The thickness of the track bar. `0.05` by default.
-  @IBInspectable open var trackThickness: CGFloat = 0.05 {
+  @IBInspectable open var trackThickness: CGFloat = 0.3 {
     didSet {
       updateTrackLayerFrameAndKnobPositions()
     }
@@ -187,19 +187,37 @@ import QuartzCore
   let upperKnob = RangeSliderKnob()
   let lowerLabel = CATextLayer()
   let upperLabel = CATextLayer()
-  
-  var TrackThickness: CGFloat {
-    get {
-      return trueTrackThickness ? trackThickness : trackThickness * bounds.height
+  // OLAS VARS
+  let upperCenterLabel = CATextLayer()
+  let lowerCenterLabel = CATextLayer()
+
+    // ORIGINAL
+//  var TrackThickness: CGFloat {
+//    get {
+//      return trueTrackThickness ? trackThickness : trackThickness * bounds.height
+//    }
+//  }
+    // OLA Y
+    var TrackThickness: CGFloat {
+        get {
+            return trueTrackThickness ? trackThickness : trackThickness * bounds.width
+        }
     }
-  }
-  
-  var KnobSize: CGFloat {
-    get {
-      return trueKnobSize ? knobSize : knobSize * bounds.height
+// ORIGINAL
+//  var KnobSize: CGFloat {
+//    get {
+//      return trueKnobSize ? knobSize : knobSize * bounds.height
+//    }
+//  }
+    // OLA Y
+    var KnobSize: CGFloat {
+        get {
+          // experiment 
+            // return knobSize * 
+
+            return trueKnobSize ? knobSize : knobSize * bounds.width
+        }
     }
-  }
-  
   ///The frame of the `RangeSlider` instance.
   override open var frame: CGRect {
     didSet {
@@ -252,10 +270,16 @@ import QuartzCore
     lowerKnob.contentsScale = UIScreen.main.scale
     layer.addSublayer(lowerKnob)
     
+    // upperKnob.frame = CGRect(x: 0, y: 0, width: KnobSize, height: KnobSize)
     upperKnob.frame = CGRect(x: 0, y: 0, width: KnobSize, height: KnobSize)
     upperKnob.rangeSlider = self
     upperKnob.contentsScale = UIScreen.main.scale
     layer.addSublayer(upperKnob)
+    
+    // NEW
+    lowerKnob.isUpperKnob = false
+    upperKnob.isUpperKnob = true
+    
     
     lowerLabel.alignmentMode = kCAAlignmentCenter
     lowerLabel.fontSize = labelFontSize
@@ -277,32 +301,54 @@ import QuartzCore
   // MARK: Member Functions
   
   open func updateLayerFramesAndPositions() {
-    lowerKnob.frame = CGRect(x: 0, y: 0, width: KnobSize, height: KnobSize)
-    upperKnob.frame = CGRect(x: 0, y: 0, width: KnobSize, height: KnobSize)
+    lowerKnob.frame = CGRect(x: 0, y: 0, width: KnobSize * 1.55, height: KnobSize * 1.55)
+    upperKnob.frame = CGRect(x: 0, y: 0, width: KnobSize * 1.55, height: KnobSize * 1.55)
     updateTrackLayerFrameAndKnobPositions()
   }
   
   ///Updates the tracks layer frame and the knobs positions.
-  open func updateTrackLayerFrameAndKnobPositions() {
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
-    let newTrackDy = (frame.height - TrackThickness) / 2
-    track.frame = CGRect(x: 0, y: newTrackDy, width: frame.width, height: TrackThickness)
-    track.setNeedsDisplay()
-    
-    let lowerKnobCenter = positionForValue(lowerValue)
-    lowerKnob.position = lowerKnobCenter
-    lowerKnob.setNeedsDisplay()
-    
-    let upperKnobCenter = positionForValue(upperValue)
-    upperKnob.position = upperKnobCenter
-    upperKnob.setNeedsDisplay()
-    
-    updateLabelText()
-    updateLabelPositions()
-    CATransaction.commit()
-  }
-    
+    //ORIGINAL Y
+//  open func updateTrackLayerFrameAndKnobPositions() {
+//    CATransaction.begin()
+//    CATransaction.setDisableActions(true)
+//    let newTrackDy = (frame.height - TrackThickness) / 2
+//    track.frame = CGRect(x: 0, y: newTrackDy, width: frame.width, height: TrackThickness)
+//    track.setNeedsDisplay()
+//
+//    let lowerKnobCenter = positionForValue(lowerValue)
+//    lowerKnob.position = lowerKnobCenter
+//    lowerKnob.setNeedsDisplay()
+//
+//    let upperKnobCenter = positionForValue(upperValue)
+//    upperKnob.position = upperKnobCenter
+//    upperKnob.setNeedsDisplay()
+//
+//    updateLabelText()
+//    updateLabelPositions()
+//    CATransaction.commit()
+//  }
+    // OLA X
+    open func updateTrackLayerFrameAndKnobPositions() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        let newTrackDx = (frame.width - TrackThickness) / 2
+        track.frame = CGRect(x: newTrackDx, y: 0, width: TrackThickness, height: frame.height)
+        track.setNeedsDisplay()
+        
+        let lowerKnobCenter = positionForValue(lowerValue)
+        lowerKnob.position = lowerKnobCenter
+        lowerKnob.setNeedsDisplay()
+        
+        let upperKnobCenter = positionForValue(upperValue)
+        upperKnob.position = upperKnobCenter
+        upperKnob.setNeedsDisplay()
+        
+        updateLabelText()
+        updateLabelPositions()
+        print("before commit")
+        CATransaction.commit()
+        print("after commit")
+    }
     /**
      Get the label text for a given value.
      
@@ -313,16 +359,28 @@ import QuartzCore
      
      Breaking out this functionality from 'updateLabelText()' allows a subclass of RangeSlider to override this method and provide custom text. For example, if the slider is representing centimeters of snow, the override function could return "\(value)cm" instead of just "\(value)". Or it could modify the number of decimals shown.
      */
+    
     open func getLabelText(forValue value: Double) -> String {
-        
-        let numberFormatter = NumberFormatter()
-        numberFormatter.numberStyle = NumberFormatter.Style.decimal
-        numberFormatter.maximumFractionDigits = 0
-        guard let labelText = numberFormatter.string(from: NSNumber(value: value)) else { return "" }
-        
-        return labelText
+         let numberFormatter = NumberFormatter()
+         numberFormatter.numberStyle = NumberFormatter.Style.decimal
+         numberFormatter.maximumFractionDigits = 0
+         guard let labelText = numberFormatter.string(from: NSNumber(value: value)) else { return "" }
+         return labelText
     }
   
+    open func calcReverseValues() -> (Double, Double){
+        let max = self.maximumValue
+        let min = self.minimumValue
+        
+        let reverseUpperValue = (self.maximumValue - upperValue)
+        let reverseLowerValue = (self.maximumValue - lowerValue)
+        
+        print("reverseUpperValue \(reverseUpperValue)")
+        print("reverseLowerValue \(reverseLowerValue)")
+        return (reverseLowerValue, reverseUpperValue)
+    }
+    
+    
   ///Updates the labels text content.
   open func updateLabelText() {
     if hideLabels {
@@ -331,11 +389,31 @@ import QuartzCore
       return
     }
     
-    lowerLabel.fontSize = labelFontSize
-    upperLabel.fontSize = labelFontSize
+    let maxfontsize = CGFloat(26.0)
+    let scale = CGFloat(maximumValue - minimumValue)
+    let constant = CGFloat(6.0)
     
-    lowerLabel.string = getLabelText(forValue: lowerValue)
-    upperLabel.string = getLabelText(forValue: upperValue)
+    // calculate reverse values
+    let lowhigh = calcReverseValues()
+    let lowFontSize = maxfontsize - constant + constant * CGFloat(lowhigh.1) / scale
+    let highFontSize = maxfontsize - constant + constant * CGFloat(lowhigh.0) / scale
+    
+    lowerLabel.font = UIFont(name: "BebasNeueRegular", size: maxfontsize)
+    upperLabel.font = UIFont(name: "BebasNeueRegular", size: maxfontsize)
+    
+    lowerLabel.fontSize = CGFloat(highFontSize)
+    upperLabel.fontSize = CGFloat(lowFontSize)
+
+    
+    
+//    lowerLabel.string = getLabelText(forValue: lowerValue)
+//    upperLabel.string = getLabelText(forValue: upperValue)
+
+    let lowerString = getLabelText(forValue: lowhigh.0) + "\n collegues"
+    let upperString = getLabelText(forValue: lowhigh.1) + "\n collegues"
+    
+    lowerLabel.string = lowerString
+    upperLabel.string = upperString
     
     lowerLabel.foregroundColor = labelColor.cgColor
     upperLabel.foregroundColor = labelColor.cgColor
@@ -350,9 +428,13 @@ import QuartzCore
     
     let lowerKnobCenter = centerOfRect(rect: lowerKnob.frame)
     let upperKnobCenter = centerOfRect(rect: upperKnob.frame)
-    
-    var newLowerLabelCenter = CGPoint(x: lowerKnobCenter.x, y: lowerKnob.frame.origin.y - (lowerLabel.frame.size.height / 2))
-    var newUpperLabelCenter = CGPoint(x: upperKnobCenter.x, y: upperKnob.frame.origin.y - (upperLabel.frame.size.height / 2))
+//    ORIGINAL X
+//    var newLowerLabelCenter = CGPoint(x: lowerKnobCenter.x, y: lowerKnob.frame.origin.y - (lowerLabel.frame.size.height / 2))
+//    var newUpperLabelCenter = CGPoint(x: upperKnobCenter.x, y: upperKnob.frame.origin.y - (upperLabel.frame.size.height / 2))
+//
+    // OLA Y
+    var newLowerLabelCenter = CGPoint(x: lowerKnob.frame.origin.x - 60 , y: lowerKnobCenter.y + 10)
+    var newUpperLabelCenter = CGPoint(x: upperKnob.frame.origin.x + 160, y: upperKnobCenter.y + 10)
     
     lowerLabel.frame = CGRect(x: 0, y: 0, width: lowerLabelTextSize.width, height: lowerLabelTextSize.height)
     upperLabel.frame = CGRect(x: 0, y: 0, width: upperLabelTextSize.width, height: upperLabelTextSize.height)
@@ -428,49 +510,93 @@ import QuartzCore
    
    - returns: A bool indicating success.
    */
-  override open func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-    let location = touch.location(in: self)
-    
-    let deltaLocation = Double(location.x - previousLocation.x)
-    var deltaValue = (maximumValue - minimumValue) * deltaLocation / Double(bounds.width - KnobSize)
-    
-    if abs(deltaValue) < stepValue {
-      return true
-    }
-    
-    if stepValue != 0 {
-      deltaValue = deltaValue < 0 ? -stepValue : stepValue
-    }
-    
-    previousLocation = location
-    
-    if lowerKnob.highlighted && upperKnob.highlighted {
-      let gap = upperValue - lowerValue
-      if (deltaValue > 0) {
-        let newUpperValue = upperValue + deltaValue
-        upperValue = boundValue(newUpperValue, toLowerValue: (lowerValue + max(minimumDistance, gap)), upperValue: maximumValue)
-        let newLowerValue = lowerValue + deltaValue
-        lowerValue = boundValue(newLowerValue, toLowerValue: minimumValue, upperValue: (upperValue - max(minimumDistance, gap)))
-      } else {
-        let newLowerValue = lowerValue + deltaValue
-        lowerValue = boundValue(newLowerValue, toLowerValue: minimumValue, upperValue: (upperValue - max(minimumDistance, gap)))
-        let newUpperValue = upperValue + deltaValue
-        upperValue = boundValue(newUpperValue, toLowerValue: (lowerValue + max(minimumDistance, gap)), upperValue: maximumValue)
-      }
-    }
-    else if lowerKnob.highlighted {
-      let newLowerValue = lowerValue + deltaValue
-      lowerValue = boundValue(newLowerValue, toLowerValue: minimumValue, upperValue: (upperValue - minimumDistance))
-    } else if upperKnob.highlighted {
-      let newUpperValue = upperValue + deltaValue
-      upperValue = boundValue(newUpperValue, toLowerValue: (lowerValue + minimumDistance), upperValue: maximumValue)
-    }
-    
-    sendActions(for: .valueChanged)
+    // ORIGINAL X
+//  override open func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+//    let location = touch.location(in: self)
+//
+//    let deltaLocation = Double(location.x - previousLocation.x)
+//    var deltaValue = (maximumValue - minimumValue) * deltaLocation / Double(bounds.width - KnobSize)
+//
+//    if abs(deltaValue) < stepValue {
+//      return true
+//    }
+//
+//    if stepValue != 0 {
+//      deltaValue = deltaValue < 0 ? -stepValue : stepValue
+//    }
+//
+//    previousLocation = location
+//
+//    if lowerKnob.highlighted && upperKnob.highlighted {
+//      let gap = upperValue - lowerValue
+//      if (deltaValue > 0) {
+//        let newUpperValue = upperValue + deltaValue
+//        upperValue = boundValue(newUpperValue, toLowerValue: (lowerValue + max(minimumDistance, gap)), upperValue: maximumValue)
+//        let newLowerValue = lowerValue + deltaValue
+//        lowerValue = boundValue(newLowerValue, toLowerValue: minimumValue, upperValue: (upperValue - max(minimumDistance, gap)))
+//      } else {
+//        let newLowerValue = lowerValue + deltaValue
+//        lowerValue = boundValue(newLowerValue, toLowerValue: minimumValue, upperValue: (upperValue - max(minimumDistance, gap)))
+//        let newUpperValue = upperValue + deltaValue
+//        upperValue = boundValue(newUpperValue, toLowerValue: (lowerValue + max(minimumDistance, gap)), upperValue: maximumValue)
+//      }
+//    }
+//    else if lowerKnob.highlighted {
+//      let newLowerValue = lowerValue + deltaValue
+//      lowerValue = boundValue(newLowerValue, toLowerValue: minimumValue, upperValue: (upperValue - minimumDistance))
+//    } else if upperKnob.highlighted {
+//      let newUpperValue = upperValue + deltaValue
+//      upperValue = boundValue(newUpperValue, toLowerValue: (lowerValue + minimumDistance), upperValue: maximumValue)
+//    }
+//
+//    sendActions(for: .valueChanged)
+//
+//    return true
+//  }
+    // OLA Y
+    override open func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+        let location = touch.location(in: self)
         
-    return true
-  }
-  
+        let deltaLocation = Double(location.y - previousLocation.y)
+        var deltaValue = (maximumValue - minimumValue) * deltaLocation / Double(bounds.height - KnobSize)
+        
+        if abs(deltaValue) < stepValue {
+            return true
+        }
+        
+        if stepValue != 0 {
+            deltaValue = deltaValue < 0 ? -stepValue : stepValue
+        }
+        
+        previousLocation = location
+        
+        if lowerKnob.highlighted && upperKnob.highlighted {
+            let gap = upperValue - lowerValue
+            if (deltaValue > 0) {
+                let newUpperValue = upperValue + deltaValue
+                upperValue = boundValue(newUpperValue, toLowerValue: (lowerValue + max(minimumDistance, gap)), upperValue: maximumValue)
+                let newLowerValue = lowerValue + deltaValue
+                lowerValue = boundValue(newLowerValue, toLowerValue: minimumValue, upperValue: (upperValue - max(minimumDistance, gap)))
+            } else {
+                let newLowerValue = lowerValue + deltaValue
+                lowerValue = boundValue(newLowerValue, toLowerValue: minimumValue, upperValue: (upperValue - max(minimumDistance, gap)))
+                let newUpperValue = upperValue + deltaValue
+                upperValue = boundValue(newUpperValue, toLowerValue: (lowerValue + max(minimumDistance, gap)), upperValue: maximumValue)
+            }
+        }
+        else if lowerKnob.highlighted {
+            let newLowerValue = lowerValue + deltaValue
+            lowerValue = boundValue(newLowerValue, toLowerValue: minimumValue, upperValue: (upperValue - minimumDistance))
+        } else if upperKnob.highlighted {
+            let newUpperValue = upperValue + deltaValue
+            upperValue = boundValue(newUpperValue, toLowerValue: (lowerValue + minimumDistance), upperValue: maximumValue)
+        }
+        
+        sendActions(for: .valueChanged)
+        
+        return true
+    }
+    
   /**
    Triggers on the end of touch of the `RangeSlider` and sets the button layers `highlighted` property to `false`.
    */
@@ -508,23 +634,42 @@ import QuartzCore
   /**
    Returns the position of the Knob to be placed on the slider given the value it should be on the slider
    */
-  func positionForValue(_ value: Double) -> CGPoint {
-    if maximumValue == minimumValue {
-      return CGPoint(x: 0, y: 0)
+    // ORIGINAL
+//  func positionForValue(_ value: Double) -> CGPoint {
+//    if maximumValue == minimumValue {
+//      return CGPoint(x: 0, y: 0)
+//    }
+//
+//    let percentage = percentageForValue(value)
+//
+//    let knobDeltaX: CGFloat = (KnobSize / 2) - RangeSliderKnob.KnobDelta
+//    let knobDeltaWidth:CGFloat = -(KnobSize - (RangeSliderKnob.KnobDelta * 2))
+//
+//    let xPosition = (bounds.width + knobDeltaWidth) * percentage
+//
+//    let yPosition = track.frame.midY
+//
+//    return CGPoint(x: xPosition + knobDeltaX, y: yPosition)
+//  }
+    // OLAL Y
+    func positionForValue(_ value: Double) -> CGPoint {
+        if maximumValue == minimumValue {
+            return CGPoint(x: 0, y: 0)
+        }
+        
+        let percentage = percentageForValue(value)
+        
+        let knobDeltaY: CGFloat = (KnobSize / 2) - RangeSliderKnob.KnobDelta
+        let knobDeltaWidth:CGFloat = -(KnobSize - (RangeSliderKnob.KnobDelta * 2))
+        
+        let xPosition = track.frame.midX
+        
+        let yPosition = (bounds.height + knobDeltaWidth) * percentage
+        
+        return CGPoint(x: xPosition, y: yPosition + knobDeltaY)
     }
     
-    let percentage = percentageForValue(value)
     
-    let knobDeltaX: CGFloat = (KnobSize / 2) - RangeSliderKnob.KnobDelta
-    let knobDeltaWidth:CGFloat = -(KnobSize - (RangeSliderKnob.KnobDelta * 2))
-    
-    let xPosition = (bounds.width + knobDeltaWidth) * percentage
-    
-    let yPosition = track.frame.midY
-    
-    return CGPoint(x: xPosition + knobDeltaX, y: yPosition)
-  }
-  
   func percentageForValue(_ value: Double) -> CGFloat {
     if minimumValue == maximumValue {
       return 0
